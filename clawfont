@@ -1,0 +1,24 @@
+#!/usr/bin/python
+
+import argparse
+
+# create the top-level parser
+parser = argparse.ArgumentParser(prog='clawfont')
+subparsers = parser.add_subparsers(help='command help')
+
+parser_create_index = subparsers.add_parser('create-index', help='create a index file')
+parser_create_index.add_argument('index-file', action='store')
+parser_create_index.add_argument('directory', action='store')
+parser_create_index.set_defaults(action='create-index')
+
+parser_update_index = subparsers.add_parser('update-index', help='update a index file')
+parser_update_index.add_argument('index-file', action='store')
+parser_update_index.add_argument('directory', action='store')
+parser_update_index.set_defaults(action='update-index')
+
+parser_build_font = subparsers.add_parser('build-font', help='build font files')
+parser_build_font.add_argument('index-file', action='store')
+parser_build_font.set_defaults(action='build_font')
+
+args = parser.parse_args()
+print args
