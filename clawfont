@@ -1,24 +1,78 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import argparse
+import configparser
+import os
+import os.path
 
-# create the top-level parser
-parser = argparse.ArgumentParser(prog='clawfont')
-subparsers = parser.add_subparsers(help='command help')
+DEFAULT_CHARACTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ '
 
-parser_create_index = subparsers.add_parser('create-index', help='create a index file')
-parser_create_index.add_argument('index-file', action='store')
-parser_create_index.add_argument('directory', action='store')
-parser_create_index.set_defaults(action='create-index')
+class Actions:
+    def create_index(self, index_file, directory, author=None, license=None, abspath=False):
+        if author is None:
+            author = input('Author: ')
 
-parser_update_index = subparsers.add_parser('update-index', help='update a index file')
-parser_update_index.add_argument('index-file', action='store')
-parser_update_index.add_argument('directory', action='store')
-parser_update_index.set_defaults(action='update-index')
+        if license is None:
+            license = input('License: ')
 
-parser_build_font = subparsers.add_parser('build-font', help='build font files')
-parser_build_font.add_argument('index-file', action='store')
-parser_build_font.set_defaults(action='build_font')
+        print(index_file, directory, author, license)
 
-args = parser.parse_args()
-print args
+        index = configparser.RawConfigParser()
+        index['font'] = {
+            'author': author,
+            'license': license,
+        }
+
+        index['charmap'] = {}
+        counter = 0
+        for filename in os.listdir(directory):
+            if os.path.splitext(filename)[1] == '.svg':
+                if abspath:
+                    index['charmap'][DEFAULT_CHARACTERS[counter]] = os.path.abspath(os.path.join(directory, filename))
+                else:
+                    index['charmap'][DEFAULT_CHARACTERS[counter]] = os.path.join(directory, filename)
+                counter += 1
+
+        with open(index_file, 'w') as output_file:
+            index.write(output_file)
+
+    def update_index(self, index_file, directory, author=None, license=None, abspath=False):
+        print(index_file, directory, author, license)
+
+    def build_font(self, index_file, font_file):
+        print(index_file, font_file)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(prog='clawfont')
+    subparsers = parser.add_subparsers(help='command help')
+
+    parser_create_index = subparsers.add_parser('create-index', help='create a index file')
+    parser_create_index.add_argument('--author', type=str, action='store')
+    parser_create_index.add_argument('--license', type=str, action='store')
+    parser_create_index.add_argument('--abspath', action='store_true')
+    parser_create_index.add_argument('index_file', type=str, action='store')
+    parser_create_index.add_argument('directory', type=str, action='store')
+    parser_create_index.set_defaults(action='create-index')
+
+    parser_update_index = subparsers.add_parser('update-index', help='update a index file')
+    parser_update_index.add_argument('--author', type=str, action='store')
+    parser_update_index.add_argument('--license', type=str, action='store')
+    parser_update_index.add_argument('--abspath', action='store_true')
+    parser_update_index.add_argument('index_file', type=str, action='store')
+    parser_update_index.add_argument('directory', type=str, action='store')
+    parser_update_index.set_defaults(action='update-index')
+
+    parser_build_font = subparsers.add_parser('build-font', help='build font files')
+    parser_build_font.add_argument('index_file', type=str, action='store')
+    parser_build_font.add_argument('font_file', type=str, action='store')
+    parser_build_font.set_defaults(action='build_font')
+
+    args = parser.parse_args()
+    actions = Actions()
+    if args.action == 'create-index':
+        actions.create_index(args.index_file, args.directory, args.author, args.license, args.abspath)
+    elif args.action == 'update-index':
+        actions.update_index(args.index_file, args.directory, args.author, args.license, args.abspath)
+    elif args.action == 'build-font':
+        actions.build_font(args.index_file, args.font_file)
