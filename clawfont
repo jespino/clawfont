@@ -4,6 +4,7 @@ import argparse
 import configparser
 import os
 import os.path
+from jinja2 import Template
 
 DEFAULT_CHARACTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ '
 
@@ -62,8 +63,50 @@ class Actions:
             index.write(output_file)
 
     def build_font(self, index_file, font_file):
-        print(index_file, font_file)
+        font_template = Template('''
+        <font id="{{ font_id }}" horiz-adv-x="{{horiz_adv_x}}">
+          <font-face font-family="{{ family }}" font-weight="{{ weight }}" font-style="{{ style }}"
+              units-per-em="{{ units_per_em }}" cap-height="{{ cap_height }}" x-height="{{ x_height }}"
+              ascent="{{ ascent }}" descent="{{ descent }}"
+              alphabetic="{{ alphabetic }}" mathematical="{{ mathematical }}" ideographic="{{ ideographic }}" hanging="{{ hanging }}">
+            <font-face-src>
+              <font-face-name name="{{ font_face_name }}"/>
+            </font-face-src>
+          </font-face>
+          <missing-glyph>{{ missing_glyph }}</missing-glyph>
+          {% for glyph in glyphs %}
+            <glyph unicode="{{ glyph.char }}">{{ glyph.svg }}</glyph>
+          {% endfor %}
+        </font>
+        ''')
 
+        index = configparser.ConfigParser()
+        index.read(index_file)
+
+        glyphs = []
+        for char, filename in index['charmap'].items():
+            glyphs.append({'char': char, 'svg': open(filename, 'r').read()})
+
+        context = {
+            'font_id': 'Font1',
+            'horiz_adv_x': 1000,
+            'family': 'Sans',
+            'weight': 'normal',
+            'style': 'normal',
+            'units_per_em': 1000,
+            'cap_height': 600,
+            'x_height': 400,
+            'ascent': 700,
+            'descent': 300,
+            'alphabetic': 0,
+            'mathematical': 350,
+            'ideographic': 400,
+            'hanging': 500,
+            'font_face_name': 'example',
+            'missing_glyph': '',
+            'glyphs': glyphs
+        }
+        open(font_file, 'w').write(font_template.render(**context))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='clawfont')
@@ -88,7 +131,7 @@ if __name__ == '__main__':
     parser_build_font = subparsers.add_parser('build-font', help='build font files')
     parser_build_font.add_argument('index_file', type=str, action='store')
     parser_build_font.add_argument('font_file', type=str, action='store')
-    parser_build_font.set_defaults(action='build_font')
+    parser_build_font.set_defaults(action='build-font')
 
     args = parser.parse_args()
     actions = Actions()
