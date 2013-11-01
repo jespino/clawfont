@@ -9,18 +9,14 @@ DEFAULT_CHARACTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ012345
 
 class Actions:
     def create_index(self, index_file, directory, author=None, license=None, abspath=False):
-        if author is None:
-            author = input('Author: ')
+        author = author or input('Author: ')
+        license = license or input('License: ')
 
-        if license is None:
-            license = input('License: ')
-
-        print(index_file, directory, author, license)
-
-        index = configparser.RawConfigParser()
+        index = configparser.ConfigParser()
         index['font'] = {
             'author': author,
             'license': license,
+            'abspath': abspath
         }
 
         index['charmap'] = {}
@@ -28,16 +24,42 @@ class Actions:
         for filename in os.listdir(directory):
             if os.path.splitext(filename)[1] == '.svg':
                 if abspath:
-                    index['charmap'][DEFAULT_CHARACTERS[counter]] = os.path.abspath(os.path.join(directory, filename))
+                    filepath = os.path.abspath(os.path.join(directory, filename))
                 else:
-                    index['charmap'][DEFAULT_CHARACTERS[counter]] = os.path.join(directory, filename)
+                    filepath = os.path.join(directory, filename)
+                index['charmap'][DEFAULT_CHARACTERS[counter]] = filepath
                 counter += 1
 
         with open(index_file, 'w') as output_file:
             index.write(output_file)
 
-    def update_index(self, index_file, directory, author=None, license=None, abspath=False):
-        print(index_file, directory, author, license)
+    def update_index(self, index_file, directory, author=None, license=None):
+        index = configparser.ConfigParser()
+        index.read(index_file)
+
+        index['font']['author'] = author or index['font']['author']
+        index['font']['license'] = license or index['font']['license']
+
+        counter = 0
+        for filename in os.listdir(directory):
+            if os.path.splitext(filename)[1] == '.svg':
+                if index['font']['abspath'] == 'True':
+                    filepath = os.path.abspath(os.path.join(directory, filename))
+                else:
+                    filepath = os.path.join(directory, filename)
+
+                while DEFAULT_CHARACTERS[counter] in index['charmap'].keys() and counter < len(DEFAULT_CHARACTERS):
+                    counter += 1
+
+                if counter >= len(DEFAULT_CHARACTERS):
+                    print('Not enought default characters.')
+                    break
+
+                if filepath not in index['charmap'].values():
+                    index['charmap'][DEFAULT_CHARACTERS[counter]] = filepath
+
+        with open(index_file, 'w') as output_file:
+            index.write(output_file)
 
     def build_font(self, index_file, font_file):
         print(index_file, font_file)
@@ -73,6 +95,6 @@ if __name__ == '__main__':
     if args.action == 'create-index':
         actions.create_index(args.index_file, args.directory, args.author, args.license, args.abspath)
     elif args.action == 'update-index':
-        actions.update_index(args.index_file, args.directory, args.author, args.license, args.abspath)
+        actions.update_index(args.index_file, args.directory, args.author, args.license)
     elif args.action == 'build-font':
         actions.build_font(args.index_file, args.font_file)
