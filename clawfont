@@ -4,6 +4,7 @@ import argparse
 import configparser
 import os
 import os.path
+import xml.etree.ElementTree as ET
 from jinja2 import Template
 
 DEFAULT_CHARACTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ '
@@ -63,21 +64,35 @@ class Actions:
             index.write(output_file)
 
     def build_font(self, index_file, font_file):
-        font_template = Template('''
-        <font id="{{ font_id }}" horiz-adv-x="{{horiz_adv_x}}">
-          <font-face font-family="{{ family }}" font-weight="{{ weight }}" font-style="{{ style }}"
-              units-per-em="{{ units_per_em }}" cap-height="{{ cap_height }}" x-height="{{ x_height }}"
-              ascent="{{ ascent }}" descent="{{ descent }}"
-              alphabetic="{{ alphabetic }}" mathematical="{{ mathematical }}" ideographic="{{ ideographic }}" hanging="{{ hanging }}">
-            <font-face-src>
-              <font-face-name name="{{ font_face_name }}"/>
-            </font-face-src>
-          </font-face>
-          <missing-glyph>{{ missing_glyph }}</missing-glyph>
-          {% for glyph in glyphs %}
-            <glyph unicode="{{ glyph.char }}">{{ glyph.svg }}</glyph>
-          {% endfor %}
-        </font>
+        font_template = Template('''<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd" >
+<svg>
+<metadata>{{metadata}}</metadata>
+<defs>
+<font id="{{ font_id }}" horiz-adv-x="{{horiz_adv_x}}">
+  <font-face
+      font-family="{{ family }}"
+      font-weight="{{ weight }}"
+      font-style="{{ style }}"
+      units-per-em="{{ units_per_em }}"
+      cap-height="{{ cap_height }}"
+      x-height="{{ x_height }}"
+      ascent="{{ ascent }}"
+      descent="{{ descent }}"
+      alphabetic="{{ alphabetic }}"
+      mathematical="{{ mathematical }}"
+      ideographic="{{ ideographic }}"
+      hanging="{{ hanging }}">
+    <font-face-src>
+      <font-face-name name="{{ font_face_name }}"/>
+    </font-face-src>
+  </font-face>
+  <missing-glyph>{{ missing_glyph }}</missing-glyph>
+  {% for glyph in glyphs %}
+    <glyph unicode="{{ glyph.char }}">{{ glyph.svg }}</glyph>
+  {% endfor %}
+</font>
+</defs></svg>
         ''')
 
         index = configparser.ConfigParser()
@@ -85,7 +100,10 @@ class Actions:
 
         glyphs = []
         for char, filename in index['charmap'].items():
-            glyphs.append({'char': char, 'svg': open(filename, 'r').read()})
+            svgtree = ET.parse(filename)
+            root = svgtree.getroot()
+            children = root.getchildren()
+            glyphs.append({'char': char, 'svg': ''.join(map(lambda x: ET.tostring(x, encoding="unicode"), children))})
 
         context = {
             'font_id': 'Font1',
