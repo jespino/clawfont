@@ -4,7 +4,8 @@ import argparse
 import configparser
 import os
 import os.path
-import xml.etree.ElementTree as ET
+import tempfile
+from xml.dom import minidom
 from jinja2 import Template
 
 DEFAULT_CHARACTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ '
@@ -89,7 +90,7 @@ class Actions:
   </font-face>
   <missing-glyph>{{ missing_glyph }}</missing-glyph>
   {% for glyph in glyphs %}
-    <glyph unicode="{{ glyph.char }}">{{ glyph.svg }}</glyph>
+    <glyph unicode="{{ glyph.char }}" d="{{ glyph.path }}" />
   {% endfor %}
 </font>
 </defs></svg>
@@ -100,10 +101,14 @@ class Actions:
 
         glyphs = []
         for char, filename in index['charmap'].items():
-            svgtree = ET.parse(filename)
-            root = svgtree.getroot()
-            children = root.getchildren()
-            glyphs.append({'char': char, 'svg': ''.join(map(lambda x: ET.tostring(x, encoding="unicode"), children))})
+            (fileObj, tmpPath) = tempfile.mkstemp('.svg')
+            os.close(fileObj)
+            os.system("rsvg-convert -h 100 -w 100 -f svg {0} -o {1}".format(filename, tmpPath))
+            os.system("inkscape {0} --verb=EditSelectAll --verb=SelectionCombine --verb=ObjectToPath --verb=FileSave --verb=FileClose --without-gui".format(tmpPath))
+            svgtree = minidom.parse(tmpPath)
+            paths = svgtree.getElementsByTagName('path')
+            glyphs.append({'char': char, 'path': paths[0].getAttribute('d')})
+            os.unlink(tmpPath)
 
         context = {
             'font_id': 'Font1',
