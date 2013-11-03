@@ -103,8 +103,8 @@ class Actions:
         for char, filename in index['charmap'].items():
             (fileObj, tmpPath) = tempfile.mkstemp('.svg')
             os.close(fileObj)
-            os.system("rsvg-convert -a -h 1000 -w 1000 -f svg {0} -o {1}".format(filename, tmpPath))
-            os.system("inkscape {0} --verb=EditSelectAll --verb=SelectionCombine --verb=FileSave --verb=FileClose".format(tmpPath))
+            os.system("rsvg-convert -h 1000 -w 1000 -f svg {0} -o {1}".format(filename, tmpPath))
+            os.system("inkscape {0} --verb=EditSelectAll --verb=SelectionCombine --verb=ObjectFlipVertically --verb=FileSave --verb=FileClose".format(tmpPath))
             svgtree = minidom.parse(tmpPath)
             paths = svgtree.getElementsByTagName('path')
             glyphs.append({'char': char, 'path': paths[0].getAttribute('d')})
