@@ -67,7 +67,7 @@ class Actions:
     def build_font(self, index_file, font_file):
         font_template = Template('''<?xml version="1.0" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd" >
-<svg>
+<svg width="1000" height="1000">
 <metadata>{{metadata}}</metadata>
 <defs>
 <font id="{{ font_id }}" horiz-adv-x="{{horiz_adv_x}}">
@@ -103,8 +103,8 @@ class Actions:
         for char, filename in index['charmap'].items():
             (fileObj, tmpPath) = tempfile.mkstemp('.svg')
             os.close(fileObj)
-            os.system("rsvg-convert -h 100 -w 100 -f svg {0} -o {1}".format(filename, tmpPath))
-            os.system("inkscape {0} --verb=EditSelectAll --verb=SelectionCombine --verb=ObjectToPath --verb=FileSave --verb=FileClose --without-gui".format(tmpPath))
+            os.system("rsvg-convert -a -h 1000 -w 1000 -f svg {0} -o {1}".format(filename, tmpPath))
+            os.system("inkscape {0} --verb=EditSelectAll --verb=SelectionCombine --verb=FileSave --verb=FileClose".format(tmpPath))
             svgtree = minidom.parse(tmpPath)
             paths = svgtree.getElementsByTagName('path')
             glyphs.append({'char': char, 'path': paths[0].getAttribute('d')})
